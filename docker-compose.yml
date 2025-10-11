@@ -12,18 +12,25 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenderuser"]
+      interval: 5s
+      retries: 5
 
   api:
-    build: .
+    build:
+      context: .
+      target: dev  # Use dev stage
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - .:/code
+      - .:/code  # Local code mount for hot reload
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgres://tenderuser:tenderpass@db:5432/tenderbridge
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

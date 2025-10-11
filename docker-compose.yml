@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  db:
+    image: docker.io/library/postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: tenderuser
+      POSTGRES_PASSWORD: tenderpass
+      POSTGRES_DB: tenderbridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://tenderuser:tenderpass@db:5432/tenderbridge
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

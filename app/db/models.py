@@ -43,17 +43,16 @@ class Tender(Base):
 
     posted_by = relationship("Company", backref="tenders")
     bids = relationship("Bid", back_populates="tender", cascade="all, delete")
-
-
+    
 class Bid(Base):
     __tablename__ = "bids"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"))
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
+    tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     amount = Column(Numeric, nullable=False)
     document_path = Column(String, nullable=True)
-    status = Column(String, default="submitted")
+    status = Column(String, default="pending")  # pending, accepted, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 
     tender = relationship("Tender", back_populates="bids")

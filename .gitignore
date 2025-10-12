@@ -14,6 +14,6 @@ venv/
 .env/
 .idea/
 .vscode/
-__pycache__/
 alembic/
 alembic.ini
+uploads/

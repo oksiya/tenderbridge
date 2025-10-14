@@ -341,6 +341,7 @@ class EmailService:
             "tender_cancelled": "tender_cancelled",
             "tender_awarded": "tender_awarded",
             "tender_status_changed": "tender_status_changed",
+            "tender_deadline_reminder": "tender_deadline_reminder",  # Phase 3
             "bid_submitted": "bid_submitted",
             "bid_accepted": "bid_accepted",
             "bid_rejected": "bid_rejected",

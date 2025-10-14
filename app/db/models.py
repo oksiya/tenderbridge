@@ -45,6 +45,8 @@ class Tender(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     closing_date = Column(DateTime, nullable=False)
+    publish_date = Column(DateTime, nullable=True)  # Phase 3: Scheduled publishing
+    budget = Column(Float, nullable=True)  # Phase 3: Estimated budget
     posted_by_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

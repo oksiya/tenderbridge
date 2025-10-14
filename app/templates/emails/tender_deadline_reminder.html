@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>⏰ {{ title }}</h2>
+
+<p>{{ message }}</p>
+
+{% if tender %}
+<div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+    <h3 style="margin-top: 0; color: #856404;">Tender Details</h3>
+    <p style="margin: 5px 0;"><strong>Title:</strong> {{ tender.title }}</p>
+    <p style="margin: 5px 0;"><strong>Reference:</strong> {{ tender.reference_number }}</p>
+    {% if tender.closing_date %}
+    <p style="margin: 5px 0;"><strong>Closing Date:</strong> {{ tender.closing_date }}</p>
+    {% endif %}
+    {% if tender.time_remaining %}
+    <p style="margin: 5px 0; font-size: 18px; color: #d32f2f;"><strong>Time Remaining:</strong> {{ tender.time_remaining }}</p>
+    {% endif %}
+</div>
+
+<div style="margin: 30px 0;">
+    <p style="margin-bottom: 15px;"><strong>Next Steps:</strong></p>
+    <ul style="padding-left: 20px;">
+        <li>Review the tender requirements carefully</li>
+        <li>Prepare your bid documents</li>
+        <li>Submit your bid before the deadline</li>
+        <li>Contact us if you have any questions</li>
+    </ul>
+</div>
+
+<a href="#" class="button" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;">
+    View Tender Details
+</a>
+{% endif %}
+
+<p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+    ⚠️ <strong>Important:</strong> Make sure to submit your bid before the deadline to avoid disqualification.
+</p>
+{% endblock %}

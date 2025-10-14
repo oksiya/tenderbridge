@@ -20,6 +20,7 @@ class NotificationType:
     TENDER_CLOSED = "tender_closed"
     TENDER_CANCELLED = "tender_cancelled"
     TENDER_AWARDED = "tender_awarded"
+    TENDER_DEADLINE_REMINDER = "tender_deadline_reminder"  # Phase 3
     BID_SUBMITTED = "bid_submitted"
     BID_ACCEPTED = "bid_accepted"
     BID_REJECTED = "bid_rejected"

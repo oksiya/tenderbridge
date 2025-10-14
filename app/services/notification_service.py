@@ -28,6 +28,11 @@ class NotificationType:
     BID_WITHDRAWN = "bid_withdrawn"
     QUESTION_ASKED = "question_asked"  # Phase 3 - Q&A
     QUESTION_ANSWERED = "question_answered"  # Phase 3 - Q&A
+    DOCUMENT_UPLOADED = "document_uploaded"  # Phase 3 - Documents
+    DOCUMENT_UPDATED = "document_updated"  # Phase 3 - Documents
+    DOCUMENT_APPROVED = "document_approved"  # Phase 3 - Documents
+    DOCUMENT_REJECTED = "document_rejected"  # Phase 3 - Documents
+    DOCUMENT_NEW_VERSION = "document_new_version"  # Phase 3 - Documents
 
 
 def create_notification(
@@ -87,7 +92,6 @@ def create_notification(
                         "id": str(tender.id),
                         "title": tender.title,
                         "description": tender.description,
-                        "reference_number": tender.reference_number,
                         "status": tender.status
                     }
             
@@ -270,3 +274,128 @@ def notify_bid_submitted(
         message=f"{company_name} has submitted a bid for tender '{tender.title}'.",
         related_tender_id=tender.id
     )
+
+
+# ------------------------
+# Document Notification Methods (Phase 3 - Task 4)
+# ------------------------
+
+async def notify_document_uploaded(
+    db: Session,
+    tender_id: UUID,
+    uploader_email: str,
+    file_name: str
+):
+    """Notify tender owner company when a document is uploaded"""
+    tender = db.query(Tender).filter(Tender.id == tender_id).first()
+    if not tender:
+        return
+    
+    return notify_company_users(
+        db=db,
+        company_id=tender.posted_by_id,
+        notification_type=NotificationType.DOCUMENT_UPLOADED,
+        title="New Document Uploaded",
+        message=f"{uploader_email} uploaded '{file_name}' to tender '{tender.title}'.",
+        related_tender_id=tender_id
+    )
+
+
+async def notify_bid_document_uploaded(
+    db: Session,
+    tender_id: UUID,
+    bid_company_id: UUID,
+    file_name: str
+):
+    """Notify tender owner when a bidder uploads a document"""
+    tender = db.query(Tender).filter(Tender.id == tender_id).first()
+    company = db.query(Company).filter(Company.id == bid_company_id).first()
+    if not tender or not company:
+        return
+    
+    return notify_company_users(
+        db=db,
+        company_id=tender.posted_by_id,
+        notification_type=NotificationType.DOCUMENT_UPLOADED,
+        title="Bid Document Uploaded",
+        message=f"{company.name} uploaded '{file_name}' for their bid on '{tender.title}'.",
+        related_tender_id=tender_id
+    )
+
+
+async def notify_document_version_uploaded(
+    db: Session,
+    tender_id: UUID,
+    uploader_email: str,
+    file_name: str,
+    version: int
+):
+    """Notify when a new document version is uploaded"""
+    tender = db.query(Tender).filter(Tender.id == tender_id).first()
+    if not tender:
+        return
+    
+    return notify_company_users(
+        db=db,
+        company_id=tender.posted_by_id,
+        notification_type=NotificationType.DOCUMENT_NEW_VERSION,
+        title="New Document Version",
+        message=f"{uploader_email} uploaded version {version} of '{file_name}' for tender '{tender.title}'.",
+        related_tender_id=tender_id
+    )
+
+
+async def notify_document_approved(
+    db: Session,
+    uploader_id: UUID,
+    file_name: str,
+    approver_email: str
+):
+    """Notify uploader when their document is approved"""
+    uploader = db.query(User).filter(User.id == uploader_id).first()
+    if not uploader:
+        return
+    
+    notification = create_notification(
+        db=db,
+        user_id=uploader_id,
+        notification_type=NotificationType.DOCUMENT_APPROVED,
+        title="Document Approved",
+        message=f"Your document '{file_name}' has been approved by {approver_email}.",
+        email_context={
+            "file_name": file_name,
+            "approver": approver_email
+        }
+    )
+    
+    return notification
+
+
+async def notify_document_rejected(
+    db: Session,
+    uploader_id: UUID,
+    file_name: str,
+    rejector_email: str,
+    rejection_reason: str
+):
+    """Notify uploader when their document is rejected"""
+    uploader = db.query(User).filter(User.id == uploader_id).first()
+    if not uploader:
+        return
+    
+    notification = create_notification(
+        db=db,
+        user_id=uploader_id,
+        notification_type=NotificationType.DOCUMENT_REJECTED,
+        title="Document Rejected",
+        message=f"Your document '{file_name}' was rejected by {rejector_email}. Reason: {rejection_reason}",
+        email_context={
+            "file_name": file_name,
+            "rejector": rejector_email,
+            "reason": rejection_reason
+        }
+    )
+    
+    return notification
+
+

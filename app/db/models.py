@@ -1,8 +1,8 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Numeric, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Numeric, Float, Boolean, BigInteger
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from datetime import datetime
 import uuid
-from sqlalchemy.dialects.postgresql import UUID
 from app.db.session import Base
 
 class Company(Base):
@@ -165,4 +165,55 @@ class Answer(Base):
     
     question = relationship("Question", backref="answers")
     answered_by = relationship("User", backref="answers_given", foreign_keys=[answered_by_id])
+
+
+class Document(Base):
+    """Enhanced document management with versioning and approval workflow (Phase 3)"""
+    __tablename__ = "documents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Document ownership (either tender or bid, not both)
+    tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id", ondelete="CASCADE"), nullable=True)
+    bid_id = Column(UUID(as_uuid=True), ForeignKey("bids.id", ondelete="CASCADE"), nullable=True)
+    uploaded_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
+    # File information
+    file_path = Column(String, nullable=False)
+    file_name = Column(String, nullable=False)
+    file_size = Column(BigInteger, nullable=False)
+    file_type = Column(String, nullable=False)
+    file_hash = Column(String, nullable=True)  # SHA256 for integrity
+    
+    # Document classification
+    category = Column(String, nullable=False, default="general")
+    # Categories: technical, financial, compliance, legal, general, addendum
+    tags = Column(Text, nullable=True)  # Comma-separated tags
+    description = Column(Text, nullable=True)
+    
+    # Versioning support
+    version = Column(Integer, nullable=False, default=1)
+    parent_document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=True)
+    is_current_version = Column(Boolean, default=True)
+    
+    # Approval workflow
+    status = Column(String, nullable=False, default="draft")
+    # Status: draft, pending_approval, approved, rejected, archived
+    approved_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    approval_date = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    
+    # Metadata (extensible JSON field) - renamed to avoid SQLAlchemy conflict
+    doc_metadata = Column(JSONB, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    tender = relationship("Tender", backref="documents", foreign_keys=[tender_id])
+    bid = relationship("Bid", backref="documents", foreign_keys=[bid_id])
+    uploaded_by = relationship("User", backref="uploaded_documents", foreign_keys=[uploaded_by_id])
+    approved_by = relationship("User", backref="approved_documents", foreign_keys=[approved_by_id])
+    parent_document = relationship("Document", remote_side=[id], backref="revisions")
 

@@ -34,6 +34,31 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - 🔔 **Notification System** - In-app notifications for all events
 - 🤖 **Automatic Updates** - Auto-update bid statuses on award
 
+### Advanced Features (Phase 3) ✅
+- ✉️ **Email Integration** - Multi-provider email service (SMTP/Gmail/SendGrid)
+  - 10 email templates for all tender/bid events
+  - HTML + plain text formats
+  - User email preferences management
+  - Email tracking and analytics
+- ⏰ **Scheduled Jobs** - Automated background tasks (APScheduler)
+  - Auto-close tenders at deadline
+  - Deadline reminder notifications (24h before)
+  - Old data cleanup (90+ days)
+- ❓ **Q&A System** - Bidder questions and official responses
+  - Public Q&A accessible to all bidders
+  - Tender manager can answer questions
+  - Notification system integration
+  - Access control enforcement
+- 📄 **Document Management** - Enterprise-grade document handling
+  - Multiple documents per tender/bid
+  - Version control and history tracking
+  - 6 document categories (technical, financial, compliance, legal, general, addendum)
+  - Approval workflow (draft → pending → approved/rejected)
+  - File download with proper headers
+  - Document statistics and analytics
+  - SHA256 file integrity verification
+  - JSONB metadata for extensibility
+
 ### User Roles
 - **Admin** (100) - Full system access
 - **Company Admin** (80) - Manage company users and settings
@@ -80,10 +105,24 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 
 ## 📚 Documentation
 
-- **[Phase 1 Implementation](PHASE1_IMPLEMENTATION.md)** - Complete Phase 1 documentation
-- **[Phase 1 Quick Start](PHASE1_QUICKSTART.md)** - Quick reference guide
-- **[Phase 1 Test Results](PHASE1_TEST_RESULTS.md)** - Testing verification
+### Phase Completion Docs
+- **[Phase 1 Implementation](archive/PHASE1_IMPLEMENTATION.md)** - Security & RBAC
+- **[Phase 1 Quick Start](archive/PHASE1_QUICKSTART.md)** - Quick reference guide
+- **[Phase 1 Test Results](archive/PHASE1_TEST_RESULTS.md)** - Testing verification
+- **[Phase 2 Implementation](archive/PHASE2_IMPLEMENTATION.md)** - Workflow enhancements
+- **[Phase 2 Quick Start](archive/PHASE2_QUICKSTART.md)** - Workflow testing guide
+- **[Phase 2 Test Results](archive/PHASE2_TEST_RESULTS.md)** - Workflow verification
+- **[Phase 3 Task 1](archive/PHASE3_TASK1_COMPLETE.md)** - Email Integration
+- **[Phase 3 Task 2](archive/PHASE3_TASK2_COMPLETE.md)** - Scheduled Jobs
+- **[Phase 3 Task 3](archive/PHASE3_TASK3_COMPLETE.md)** - Q&A System
+- **[Phase 3 Task 4](archive/PHASE3_TASK4_COMPLETE.md)** - Document Management
+- **[Phase 2 Polish](archive/PHASE2_POLISH_COMPLETE.md)** - Download & Stats Features
+
+### Guides
 - **[Deployment Guide](archive/DEPLOYMENT.md)** - Production deployment
+- **[Email Setup](archive/EMAIL_SETUP.md)** - Configure email providers
+- **[Security Guide](archive/SECURITY.md)** - Security best practices
+- **[Quick Reference](archive/QUICKREF.md)** - API quick reference
 
 ## 🔧 API Endpoints
 
@@ -136,6 +175,34 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - `POST /notifications/mark-read` - Mark specific as read
 - `POST /notifications/mark-all-read` - Mark all as read
 - `GET /notifications/{id}` - Get notification (auto-marks read)
+
+### Q&A System **[Phase 3]**
+- `POST /qa/tenders/{id}/questions` - Submit question (bidders)
+- `GET /qa/tenders/{id}/questions` - List all Q&A for tender
+- `GET /qa/questions/{id}` - Get specific Q&A
+- `PUT /qa/questions/{id}/answer` - Answer question (tender manager)
+- `DELETE /qa/questions/{id}` - Delete question (admin/author)
+
+### Documents **[Phase 3]**
+- `POST /documents/tenders/{id}/upload` - Upload tender document
+- `POST /documents/bids/{id}/upload` - Upload bid document
+- `GET /documents/tenders/{id}` - List tender documents (with filters)
+- `GET /documents/bids/{id}` - List bid documents
+- `GET /documents/{id}` - Get document details
+- `GET /documents/{id}/versions` - Get version history
+- `GET /documents/{id}/download` - Download file
+- `PUT /documents/{id}` - Update document metadata
+- `POST /documents/{id}/new-version` - Upload new version
+- `POST /documents/{id}/approve` - Approve document (tender manager+)
+- `POST /documents/{id}/reject` - Reject document with reason
+- `GET /documents/tenders/{id}/stats` - Tender document statistics
+- `GET /documents/bids/{id}/stats` - Bid document statistics
+
+### Admin Jobs **[Phase 3]**
+- `GET /admin/jobs/` - List scheduled jobs
+- `POST /admin/jobs/{id}/trigger` - Manually trigger job
+- `POST /admin/jobs/{id}/pause` - Pause job
+- `POST /admin/jobs/{id}/resume` - Resume job
 
 ## 🏗️ Architecture
 
@@ -254,33 +321,29 @@ curl -X PUT http://localhost:8000/tenders/TENDER_ID/status \
 - [x] Notification system infrastructure
 - [x] Automatic bid status updates on award
 
-### Phase 2.1: Notification Integration (Quick Win)
-- [ ] Add notification hooks to tender status changes
-- [ ] Add notification hooks to bid actions
-- [ ] Add notification hooks to award process
-- [ ] Enhanced error messages
-- [ ] API documentation updates
+### Phase 3: Advanced Features ✅ 80% COMPLETE
+- [x] **Email Integration** - Multi-provider email service (Task 1) ✅
+- [x] **Scheduled Jobs** - Auto-close tenders, reminders, cleanup (Task 2) ✅
+- [x] **Q&A System** - Bidder questions and responses (Task 3) ✅
+- [x] **Document Management** - Versioning, approval workflow, categories (Task 4) ✅
+- [x] **Document Download** - File serving with proper headers (Phase 2 Polish) ✅
+- [ ] **Bid Evaluation System** - Scoring and multi-evaluator support (Task 5) ⏳
 
-### Phase 3: Advanced Features
-- [ ] **Email Integration** - Connect notifications to email service
-- [ ] **Scheduled Jobs** - Auto-close tenders at deadline
-- [ ] **Evaluation System** - Scoring and multi-evaluator support
-- [ ] **Q&A System** - Bidder questions and public responses
-- [ ] **Document Management** - Multiple files, versioning, preview
-- [ ] **Reporting** - Tender analytics and audit reports
-
-### Phase 4: Advanced Features
-- [ ] Q&A system for clarifications
-- [ ] Multi-file uploads
-- [ ] Document version control
-- [ ] Audit trail
-- [ ] Analytics dashboard
+### Phase 4: Production Readiness
+- [ ] Performance optimization (caching, pagination)
+- [ ] Rate limiting and security hardening
+- [ ] Comprehensive error handling
+- [ ] Metrics and monitoring (Prometheus)
+- [ ] CI/CD pipeline
+- [ ] API versioning
 
 ### Phase 5: Compliance & Reporting
 - [ ] BEE integration
 - [ ] Compliance reports
-- [ ] Export capabilities
+- [ ] Export capabilities (PDF/Excel)
 - [ ] Advanced filtering/search
+- [ ] Analytics dashboard
+- [ ] Audit trail reports
 
 ## 📦 Technology Stack
 
@@ -328,5 +391,5 @@ For issues and questions:
 
 ---
 
-**Status:** Phase 1 Complete ✅ | Ready for Phase 2 🚀
+**Status:** Phase 3 (80% Complete) ✅ | Tasks 1-4 Done + Download Feature 🚀  
 **Last Updated:** October 14, 2025

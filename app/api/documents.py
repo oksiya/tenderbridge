@@ -704,3 +704,102 @@ def get_tender_document_stats(
         total_file_size=total_file_size,
         latest_upload=latest_upload
     )
+
+
+@router.get("/bids/{bid_id}/stats", response_model=DocumentStats)
+async def get_bid_document_statistics(
+    bid_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get document statistics for a bid
+    
+    Authorization:
+    - Bid owner company
+    - Tender owner company
+    """
+    # Check if bid exists
+    bid = db.query(Bid).filter(Bid.id == bid_id).first()
+    if not bid:
+        raise HTTPException(status_code=404, detail="Bid not found")
+    
+    # Authorization: bid owner or tender owner
+    is_bid_owner = current_user.company_id == bid.company_id
+    is_tender_owner = current_user.company_id == bid.tender.posted_by_id
+    
+    if not (is_bid_owner or is_tender_owner):
+        raise HTTPException(status_code=403, detail="Not authorized to view bid document statistics")
+    
+    # Get all current version documents for this bid
+    documents = db.query(Document).filter(
+        and_(Document.bid_id == bid_id, Document.is_current_version == True)
+    ).all()
+    
+    # Calculate statistics
+    total_documents = len(documents)
+    total_file_size = sum(doc.file_size for doc in documents)
+    
+    # Documents by category
+    docs_by_category = {}
+    for doc in documents:
+        docs_by_category[doc.category] = docs_by_category.get(doc.category, 0) + 1
+    
+    # Documents by status
+    docs_by_status = {}
+    for doc in documents:
+        docs_by_status[doc.status] = docs_by_status.get(doc.status, 0) + 1
+    
+    # Latest upload
+    latest_upload = max((doc.created_at for doc in documents), default=None)
+    
+    return DocumentStats(
+        total_documents=total_documents,
+        documents_by_category=docs_by_category,
+        documents_by_status=docs_by_status,
+        total_file_size=total_file_size,
+        latest_upload=latest_upload
+    )
+
+
+@router.get("/{document_id}/download")
+async def download_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Download a document file
+    
+    Authorization:
+    - Users with view access to the document
+    
+    Returns the file with proper Content-Disposition header for download
+    """
+    from fastapi.responses import FileResponse
+    
+    # Get document
+    document = db.query(Document).filter(Document.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Check view permissions
+    if not can_view_document(current_user, document, db):
+        raise HTTPException(status_code=403, detail="Not authorized to download this document")
+    
+    # Check if file exists
+    if not os.path.exists(document.file_path):
+        raise HTTPException(status_code=404, detail="Document file not found on server")
+    
+    # Return file with proper headers for download
+    return FileResponse(
+        path=document.file_path,
+        filename=document.file_name,
+        media_type=document.file_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{document.file_name}"',
+            "X-Document-ID": str(document.id),
+            "X-Document-Version": str(document.version),
+            "X-File-Hash": document.file_hash or ""
+        }
+    )

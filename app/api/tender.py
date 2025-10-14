@@ -16,6 +16,8 @@ from app.core.deps import get_current_user
 from app.services.chain_queue import chain_queue
 from app.utils.permissions import can_create_tender, can_award_tender
 from app.utils.tender_state import TenderStateMachine, TenderStatus
+from app.utils.pagination import PaginationParams, create_paginated_response, paginate_query
+from app.utils.cache import cache_response, invalidate_tender_cache, invalidate_bid_cache
 
 router = APIRouter(prefix="/tenders", tags=["tenders"])
 UPLOAD_DIR = "uploads/tenders"
@@ -53,15 +55,34 @@ def create_tender(
     db.commit()
     db.refresh(tender)
 
+    # Invalidate tender list cache
+    invalidate_tender_cache()
+
     return tender
 
 
-@router.get("/", response_model=list[TenderOut])
-def list_tenders(db: Session = Depends(get_db)):
-    return db.query(Tender).order_by(Tender.created_at.desc()).all()
+@router.get("/")
+@cache_response("tenders:list", ttl=300)
+def list_tenders(
+    pagination: PaginationParams = Depends(),
+    db: Session = Depends(get_db)
+):
+    """
+    List all tenders with pagination (cached for 5 minutes)
+    
+    Query Parameters:
+    - skip: Number of items to skip (default: 0)
+    - limit: Number of items to return (default: 50, max: 200)
+    
+    Returns paginated response with metadata
+    """
+    query = db.query(Tender).order_by(Tender.created_at.desc())
+    items, total = paginate_query(query, pagination.skip, pagination.limit)
+    return create_paginated_response(items, total, pagination.skip, pagination.limit)
 
 
 @router.get("/{tender_id}", response_model=TenderOut)
+@cache_response("tenders:detail", ttl=300)
 def get_tender(tender_id: UUID, db: Session = Depends(get_db)):
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
@@ -106,6 +127,9 @@ def update_tender(
     tender.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(tender)
+    
+    # Invalidate cache for this tender
+    invalidate_tender_cache(str(tender_id))
     
     return tender
 
@@ -152,6 +176,9 @@ def update_tender_status(
     
     db.commit()
     db.refresh(tender)
+    
+    # Invalidate cache for this tender
+    invalidate_tender_cache(str(tender_id))
     
     return tender
 
@@ -235,6 +262,9 @@ async def upload_tender(
     db.commit()
     db.refresh(tender)
 
+    # Invalidate tender list cache
+    invalidate_tender_cache()
+
     return {"message": "Tender uploaded successfully (draft status)", "tender": tender}
 
 
@@ -306,6 +336,10 @@ def award_tender(
     
     db.commit()
     db.refresh(tender)
+    
+    # Invalidate caches
+    invalidate_tender_cache(str(tender_id))
+    invalidate_bid_cache(tender_id=str(tender_id))
     
     # Queue blockchain job for award recording
     try:

@@ -11,6 +11,8 @@ from app.schemas.bid import BidOut, BidStatusUpdate, BidWithdrawal, BidUpdate
 from app.core.deps import get_current_user
 from app.utils.permissions import can_submit_bid
 from app.utils.tender_state import TenderStateMachine
+from app.utils.pagination import PaginationParams, create_paginated_response, paginate_query
+from app.utils.cache import cache_response, invalidate_bid_cache
 
 router = APIRouter(prefix="/bids", tags=["bids"])
 UPLOAD_DIR = "uploads/bids"
@@ -86,17 +88,22 @@ async def submit_bid_with_file(
     db.commit()
     db.refresh(bid)
 
+    # Invalidate bid caches
+    invalidate_bid_cache(str(bid.id), str(tender_id))
+
     return bid
 
 
-@router.get("/company/{company_id}", response_model=list[BidOut])
+@router.get("/company/{company_id}")
+@cache_response("bids:company", ttl=300)
 def list_bids_by_company(
-    company_id: UUID, 
+    company_id: UUID,
+    pagination: PaginationParams = Depends(),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     """
-    List all bids by a specific company.
+    List all bids by a specific company with pagination (cached for 5 minutes)
     Authorization: Only company members can view their own bids.
     """
     # Check if user belongs to the company they're trying to view
@@ -106,13 +113,16 @@ def list_bids_by_company(
             detail="Not authorized to view bids for this company"
         )
     
-    bids = db.query(Bid).filter(Bid.company_id == company_id).order_by(Bid.created_at.desc()).all()
-    return bids
+    query = db.query(Bid).filter(Bid.company_id == company_id).order_by(Bid.created_at.desc())
+    items, total = paginate_query(query, pagination.skip, pagination.limit)
+    return create_paginated_response(items, total, pagination.skip, pagination.limit)
 
 
-@router.get("/tender/{tender_id}", response_model=list[BidOut])
+@router.get("/tender/{tender_id}")
+@cache_response("bids:tender", ttl=300)
 def list_bids_for_tender(
     tender_id: UUID,
+    pagination: PaginationParams = Depends(),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -122,7 +132,9 @@ def list_bids_for_tender(
     if tender.posted_by_id != current_user.company_id:
         raise HTTPException(status_code=403, detail="Not authorized to view bids for this tender")
 
-    return db.query(Bid).filter(Bid.tender_id == tender_id).all()
+    query = db.query(Bid).filter(Bid.tender_id == tender_id).order_by(Bid.created_at.desc())
+    items, total = paginate_query(query, pagination.skip, pagination.limit)
+    return create_paginated_response(items, total, pagination.skip, pagination.limit)
 
 
 @router.put("/{bid_id}/status")

@@ -8,27 +8,30 @@ from app.db.session import get_db
 from app.db.models import Notification
 from app.schemas.notification import NotificationOut, NotificationMarkRead
 from app.core.deps import get_current_user
+from app.utils.pagination import PaginationParams, create_paginated_response, paginate_query
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
-@router.get("/", response_model=List[NotificationOut])
+@router.get("/")
 def list_notifications(
+    pagination: PaginationParams = Depends(),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
     unread_only: bool = False
 ):
     """
-    Get all notifications for the current user.
+    Get all notifications for the current user with pagination
     Optionally filter for unread notifications only.
     """
     query = db.query(Notification).filter(Notification.user_id == current_user.id)
     
     if unread_only:
-        query = query.filter(Notification.is_read == "false")
+        query = query.filter(Notification.is_read == False)
     
-    notifications = query.order_by(Notification.created_at.desc()).all()
-    return notifications
+    query = query.order_by(Notification.created_at.desc())
+    items, total = paginate_query(query, pagination.skip, pagination.limit)
+    return create_paginated_response(items, total, pagination.skip, pagination.limit)
 
 
 @router.get("/unread/count")

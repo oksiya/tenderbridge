@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.db.session import Base, engine
-from app.api import auth, company, tender, bids, users, notifications, admin_jobs
+from app.api import auth, company, tender, bids, users, notifications, admin_jobs, qa
 from app.services.scheduler_service import scheduler_service
 import logging
 
@@ -45,6 +45,7 @@ app.include_router(bids.router)
 app.include_router(users.router)
 app.include_router(notifications.router)
 app.include_router(admin_jobs.router)
+app.include_router(qa.router)
 
 @app.get("/")
 def root():

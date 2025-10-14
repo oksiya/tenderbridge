@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>❓ {{ title }}</h2>
+
+<p>{{ message }}</p>
+
+{% if tender %}
+<div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 4px;">
+    <h3 style="margin-top: 0; color: #1565c0;">Tender Details</h3>
+    <p style="margin: 5px 0;"><strong>Title:</strong> {{ tender.title }}</p>
+    {% if tender.id %}
+    <p style="margin: 5px 0;"><strong>ID:</strong> {{ tender.id }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if question %}
+<div style="background-color: #fff9c4; border-left: 4px solid #fbc02d; padding: 15px; margin: 20px 0; border-radius: 4px;">
+    <h3 style="margin-top: 0; color: #f57f17;">Question</h3>
+    <p style="font-style: italic;">"{{ question.text }}"</p>
+    {% if question.asked_by %}
+    <p style="margin-top: 10px; font-size: 14px; color: #666;">
+        <strong>Asked by:</strong> {{ question.asked_by }}
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="margin: 30px 0;">
+    <p style="margin-bottom: 15px;"><strong>Next Steps:</strong></p>
+    <ul style="padding-left: 20px;">
+        <li>Review the question carefully</li>
+        <li>Provide a clear and detailed answer</li>
+        <li>Answer through the TenderBridge platform</li>
+        <li>Ensure all bidders can see the answer</li>
+    </ul>
+</div>
+
+<a href="#" class="button" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;">
+    View Question & Answer
+</a>
+
+<p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;">
+    💡 <strong>Tip:</strong> Provide timely and comprehensive answers to maintain transparency and help bidders make informed decisions.
+</p>
+{% endblock %}

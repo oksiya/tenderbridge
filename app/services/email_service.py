@@ -346,6 +346,8 @@ class EmailService:
             "bid_accepted": "bid_accepted",
             "bid_rejected": "bid_rejected",
             "bid_withdrawn": "bid_withdrawn",
+            "question_asked": "question_asked",  # Phase 3 - Q&A
+            "question_answered": "question_answered",  # Phase 3 - Q&A
         }
         
         template_name = template_map.get(notification_type, "generic_notification")

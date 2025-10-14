@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Numeric
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Numeric, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -134,4 +134,35 @@ class EmailLog(Base):
     
     user = relationship("User", backref="email_logs")
     notification = relationship("Notification", backref="email_logs")
+
+
+class Question(Base):
+    """Questions on tenders (Phase 3)"""
+    __tablename__ = "questions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"), nullable=False)
+    asked_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    question_text = Column(Text, nullable=False)
+    is_answered = Column(String, default="false")  # true, false
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    tender = relationship("Tender", backref="questions")
+    asked_by = relationship("User", backref="questions_asked", foreign_keys=[asked_by_id])
+
+
+class Answer(Base):
+    """Answers to questions (Phase 3)"""
+    __tablename__ = "answers"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    question_id = Column(UUID(as_uuid=True), ForeignKey("questions.id"), nullable=False)
+    answered_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    answer_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    question = relationship("Question", backref="answers")
+    answered_by = relationship("User", backref="answers_given", foreign_keys=[answered_by_id])
 

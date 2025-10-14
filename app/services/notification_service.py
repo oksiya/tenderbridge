@@ -21,11 +21,13 @@ class NotificationType:
     TENDER_CANCELLED = "tender_cancelled"
     TENDER_AWARDED = "tender_awarded"
     TENDER_DEADLINE_REMINDER = "tender_deadline_reminder"  # Phase 3
+    TENDER_STATUS_CHANGED = "tender_status_changed"
     BID_SUBMITTED = "bid_submitted"
     BID_ACCEPTED = "bid_accepted"
     BID_REJECTED = "bid_rejected"
     BID_WITHDRAWN = "bid_withdrawn"
-    TENDER_STATUS_CHANGED = "tender_status_changed"
+    QUESTION_ASKED = "question_asked"  # Phase 3 - Q&A
+    QUESTION_ANSWERED = "question_answered"  # Phase 3 - Q&A
 
 
 def create_notification(

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.db.session import Base, engine
-from app.api import auth, company, tender, bids, users
+from app.api import auth, company, tender, bids, users, notifications
 
 Base.metadata.create_all(bind=engine)
 
@@ -10,10 +10,11 @@ app.include_router(company.router)
 app.include_router(tender.router)
 app.include_router(bids.router)
 app.include_router(users.router)
+app.include_router(notifications.router)
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to TenderBridge API"}
+    return {"message": "Welcome to TenderBridge API - Phase 2"}
 
 
 

@@ -7,11 +7,15 @@ import os, uuid
 
 from app.db.session import get_db
 from app.db.models import Tender, Bid
-from app.schemas.tender import TenderCreate, TenderOut, AwardTenderRequest, AwardVerification
+from app.schemas.tender import (
+    TenderCreate, TenderOut, TenderUpdate, TenderStatusUpdate,
+    AwardTenderRequest, AwardVerification
+)
 from app.services.blockchain_service import verify_award_by_tender_id
 from app.core.deps import get_current_user
 from app.services.chain_queue import chain_queue
 from app.utils.permissions import can_create_tender, can_award_tender
+from app.utils.tender_state import TenderStateMachine, TenderStatus
 
 router = APIRouter(prefix="/tenders", tags=["tenders"])
 UPLOAD_DIR = "uploads/tenders"
@@ -24,7 +28,10 @@ def create_tender(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
-    """Create a new tender (no blockchain stamping)"""
+    """
+    Create a new tender in 'draft' status.
+    Must be published before it can receive bids.
+    """
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
     
@@ -40,6 +47,7 @@ def create_tender(
         description=data.description,
         closing_date=data.closing_date,
         posted_by_id=current_user.company_id,
+        status=TenderStatus.DRAFT,  # Start in draft status
     )
     db.add(tender)
     db.commit()
@@ -61,21 +69,122 @@ def get_tender(tender_id: UUID, db: Session = Depends(get_db)):
     return tender
 
 
+@router.put("/{tender_id}", response_model=TenderOut)
+def update_tender(
+    tender_id: UUID,
+    data: TenderUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Update tender details.
+    Only allowed in 'draft' or 'published' status.
+    """
+    tender = db.query(Tender).filter(Tender.id == tender_id).first()
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    # Authorization
+    if not can_award_tender(current_user, tender.posted_by_id):
+        raise HTTPException(status_code=403, detail="Not authorized to update this tender")
+    
+    # Check if tender can be edited
+    if not TenderStateMachine.can_edit_tender(tender.status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot edit tender in '{tender.status}' status. Only draft/published tenders can be edited."
+        )
+    
+    # Update fields
+    if data.title is not None:
+        tender.title = data.title
+    if data.description is not None:
+        tender.description = data.description
+    if data.closing_date is not None:
+        tender.closing_date = data.closing_date
+    
+    tender.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(tender)
+    
+    return tender
+
+
+@router.put("/{tender_id}/status", response_model=TenderOut)
+def update_tender_status(
+    tender_id: UUID,
+    status_update: TenderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Update tender status (state machine transitions).
+    Validates transitions and handles state-specific logic.
+    """
+    tender = db.query(Tender).filter(Tender.id == tender_id).first()
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    # Authorization
+    if not can_award_tender(current_user, tender.posted_by_id):
+        raise HTTPException(status_code=403, detail="Not authorized to update this tender")
+    
+    # Validate transition
+    is_valid, message = TenderStateMachine.validate_transition(
+        tender.status,
+        status_update.status,
+        status_update.reason
+    )
+    
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=message)
+    
+    # Handle cancellation
+    if status_update.status == TenderStatus.CANCELLED:
+        tender.cancelled_at = datetime.utcnow()
+        tender.cancellation_reason = status_update.reason
+        tender.cancelled_by_id = current_user.id
+    
+    # Update status
+    tender.status = status_update.status
+    tender.status_updated_at = datetime.utcnow()
+    tender.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(tender)
+    
+    return tender
+
+
 @router.put("/{tender_id}/close")
 def close_tender(
     tender_id: UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
+    """
+    Close tender for bid submissions.
+    Transitions from 'open' to 'closed' status.
+    """
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
     if tender.posted_by_id != current_user.company_id:
         raise HTTPException(status_code=403, detail="Not authorized to close this tender")
+    
+    # Validate transition
+    if tender.status != TenderStatus.OPEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot close tender in '{tender.status}' status. Must be 'open'."
+        )
 
-    tender.status = "closed"
+    tender.status = TenderStatus.CLOSED
+    tender.status_updated_at = datetime.utcnow()
+    tender.updated_at = datetime.utcnow()
     db.commit()
-    return {"message": "Tender closed successfully"}
+    
+    return {"message": "Tender closed successfully", "status": tender.status}
 
 
 @router.post("/upload")
@@ -120,12 +229,13 @@ async def upload_tender(
         closing_date=closing_dt,
         posted_by_id=current_user.company_id,
         document_path=path,
+        status=TenderStatus.DRAFT,  # Start in draft status
     )
     db.add(tender)
     db.commit()
     db.refresh(tender)
 
-    return {"message": "Tender uploaded successfully", "tender": tender}
+    return {"message": "Tender uploaded successfully (draft status)", "tender": tender}
 
 
 @router.post("/{tender_id}/award", response_model=TenderOut)
@@ -137,7 +247,8 @@ def award_tender(
 ):
     """
     Award a tender to the winning bid - records on blockchain.
-    Only the tender owner with appropriate role can award the tender.
+    Requires tender to be in 'evaluation' status.
+    Requires justification for the award decision.
     """
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
@@ -150,7 +261,14 @@ def award_tender(
             detail="Only tender managers/admins from the tender-owning company can award tenders"
         )
     
-    if tender.status == "awarded":
+    # Check if tender can be awarded (must be in evaluation status)
+    if not TenderStateMachine.can_award(tender.status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot award tender in '{tender.status}' status. Must be in 'evaluation' status."
+        )
+    
+    if tender.status == TenderStatus.AWARDED:
         raise HTTPException(status_code=400, detail="Tender already awarded")
     
     # Verify the winning bid exists and belongs to this tender
@@ -162,10 +280,29 @@ def award_tender(
     if not bid:
         raise HTTPException(status_code=404, detail="Bid not found for this tender")
     
+    # Check bid status (should not be withdrawn)
+    if bid.status == "withdrawn":
+        raise HTTPException(status_code=400, detail="Cannot award to a withdrawn bid")
+    
     # Update tender status
-    tender.status = "awarded"
+    tender.status = TenderStatus.AWARDED
     tender.winning_bid_id = award_request.winning_bid_id
     tender.awarded_at = datetime.utcnow()
+    tender.status_updated_at = datetime.utcnow()
+    tender.updated_at = datetime.utcnow()
+    tender.award_justification = award_request.justification
+    
+    # Update bid status
+    bid.status = "accepted"
+    
+    # Update all other bids to rejected
+    other_bids = db.query(Bid).filter(
+        Bid.tender_id == tender_id,
+        Bid.id != bid.id,
+        Bid.status != "withdrawn"
+    ).all()
+    for other_bid in other_bids:
+        other_bid.status = "rejected"
     
     db.commit()
     db.refresh(tender)

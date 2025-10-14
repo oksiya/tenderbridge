@@ -9,11 +9,12 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 ## ✨ Features
 
 ### Core Functionality
-- 📝 **Tender Management** - Create, publish, and manage tenders
-- 💼 **Bid Submission** - Companies submit competitive bids
-- 🏆 **Award System** - Award tenders with blockchain verification
+- 📝 **Tender Management** - Create, publish, and manage tenders with workflow
+- 💼 **Bid Submission** - Companies submit, revise, and withdraw bids
+- 🏆 **Award System** - Award tenders with mandatory justification and blockchain verification
 - 🔗 **Blockchain Integration** - Immutable award records on Ethereum
 - 👥 **Company Management** - Multi-user company accounts
+- 🔔 **Notifications** - Real-time in-app notifications for all events
 
 ### Security & Access Control (Phase 1) ✅
 - 🔐 **Role-Based Access Control** - 5 hierarchical user roles
@@ -21,6 +22,17 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - 🔑 **Password Reset** - Secure password recovery flow
 - 🛡️ **Authorization** - Fine-grained permission controls
 - 🗑️ **Safe Deletion** - Soft delete with cascade protection
+
+### Workflow Enhancements (Phase 2) ✅
+- 🔄 **Tender State Machine** - 7-state lifecycle with transition validation
+  - draft → published → open → evaluation → awarded
+  - Cancellation with reason tracking
+  - Terminal state protection
+- ✏️ **Bid Revision** - Update bids before deadline with full version history
+- 🚫 **Bid Withdrawal** - Withdraw bids with reason tracking
+- ⚖️ **Award Justification** - Mandatory transparency for award decisions
+- 🔔 **Notification System** - In-app notifications for all events
+- 🤖 **Automatic Updates** - Auto-update bid statuses on award
 
 ### User Roles
 - **Admin** (100) - Full system access
@@ -99,12 +111,14 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - `GET /company/{id}/users` - List company users
 
 ### Tenders
-- `POST /tenders/` - Create tender (tender_manager+)
+- `POST /tenders/` - Create tender (tender_manager+, starts in 'draft')
 - `POST /tenders/upload` - Create tender with document
 - `GET /tenders/` - List all tenders
 - `GET /tenders/{id}` - Get tender details
+- `PUT /tenders/{id}` - Update tender (draft/published only) **[Phase 2]**
+- `PUT /tenders/{id}/status` - Transition tender status **[Phase 2]**
 - `PUT /tenders/{id}/close` - Close tender
-- `POST /tenders/{id}/award` - Award tender (blockchain)
+- `POST /tenders/{id}/award` - Award tender with justification (blockchain)
 - `GET /tenders/{id}/verify` - Verify award on blockchain
 
 ### Bids
@@ -113,6 +127,15 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - `GET /bids/tender/{id}` - List tender bids (tender owner)
 - `GET /bids/{id}` - Get bid details
 - `PUT /bids/{id}/status` - Update bid status (tender owner)
+- `PUT /bids/{id}/revise` - Revise bid (new amount/document) **[Phase 2]**
+- `POST /bids/{id}/withdraw` - Withdraw bid with reason **[Phase 2]**
+
+### Notifications **[Phase 2]**
+- `GET /notifications/` - List user notifications
+- `GET /notifications/unread/count` - Get unread count
+- `POST /notifications/mark-read` - Mark specific as read
+- `POST /notifications/mark-all-read` - Mark all as read
+- `GET /notifications/{id}` - Get notification (auto-marks read)
 
 ## 🏗️ Architecture
 
@@ -149,30 +172,69 @@ TenderBridge provides a comprehensive platform for managing public procurement t
 - ✅ Secure token generation
 - ✅ Company membership validation
 - ✅ Self-bid prevention
+- ✅ State machine transition validation **[Phase 2]**
+- ✅ Audit trail tracking (timestamps, reasons, justifications) **[Phase 2]**
+
+### Tender Workflow States **[Phase 2]**
+```
+draft → published → open → evaluation → awarded
+                            ↘ closed ↗      ↘ cancelled
+```
+
+**State Rules:**
+- **draft** - Can be edited, not visible to bidders
+- **published** - Can be edited, visible to bidders (not yet accepting bids)
+- **open** - Accepting bid submissions (no more edits)
+- **evaluation** - Closed for bids, under review
+- **closed** - Alternative to evaluation
+- **awarded** - Winner selected (terminal state)
+- **cancelled** - Tender cancelled with reason (terminal state)
 
 ### Future Enhancements
 - [ ] Multi-factor authentication (2FA)
 - [ ] Rate limiting
 - [ ] Audit logging
-- [ ] Email service integration
+- [ ] Email service integration (notifications ready)
 - [ ] Session management
 - [ ] IP-based access control
+- [ ] Scheduled tender closure (auto-close at deadline)
+- [ ] Evaluation system with scoring
+- [ ] Q&A system for bidder questions
 
 ## 🧪 Testing
 
 ### Run Tests
 ```bash
-# Test user registration and verification
-curl -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"test123"}'
+# Phase 1: Security and access control
+# See PHASE1_QUICKSTART.md for complete guide
 
-# Test /users/me endpoint
-curl http://localhost:8000/users/me \
-  -H "Authorization: Bearer YOUR_TOKEN"
+# Phase 2: Workflow enhancements
+./test_phase2.sh
+
+# Or test manually:
+# 1. Create tender (starts in draft)
+curl -X POST http://localhost:8000/tenders/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test","description":"Test tender","closing_date":"2025-12-31T23:59:59"}'
+
+# 2. Publish tender
+curl -X PUT http://localhost:8000/tenders/TENDER_ID/status \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"published"}'
+
+# 3. Open for bids
+curl -X PUT http://localhost:8000/tenders/TENDER_ID/status \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"open"}'
 ```
 
-See [PHASE1_QUICKSTART.md](PHASE1_QUICKSTART.md) for complete testing guide.
+**Testing Guides:**
+- [PHASE1_QUICKSTART.md](PHASE1_QUICKSTART.md) - Security features
+- [PHASE2_QUICKSTART.md](PHASE2_QUICKSTART.md) - Workflow features
+- [PHASE2_TEST_RESULTS.md](PHASE2_TEST_RESULTS.md) - Test results
 
 ## 🛣️ Roadmap
 
@@ -184,19 +246,28 @@ See [PHASE1_QUICKSTART.md](PHASE1_QUICKSTART.md) for complete testing guide.
 - [x] Password reset
 - [x] Role-based access control
 
-### Phase 2: Tender Workflow (Next)
-- [ ] Tender state machine (draft → published → awarded)
-- [ ] Bid withdrawal and revision
-- [ ] Award justification requirement
-- [ ] Notification system
-- [ ] Email integration
+### Phase 2: Tender Workflow ✅ COMPLETE
+- [x] Tender state machine (draft → published → open → evaluation → awarded)
+- [x] Bid withdrawal with reason tracking
+- [x] Bid revision with version history
+- [x] Award justification requirement (mandatory)
+- [x] Notification system infrastructure
+- [x] Automatic bid status updates on award
 
-### Phase 3: Evaluation System
-- [ ] Evaluation criteria definition
-- [ ] Bid scoring interface
-- [ ] Multi-evaluator support
-- [ ] Score calculation and ranking
-- [ ] Evaluation reports
+### Phase 2.1: Notification Integration (Quick Win)
+- [ ] Add notification hooks to tender status changes
+- [ ] Add notification hooks to bid actions
+- [ ] Add notification hooks to award process
+- [ ] Enhanced error messages
+- [ ] API documentation updates
+
+### Phase 3: Advanced Features
+- [ ] **Email Integration** - Connect notifications to email service
+- [ ] **Scheduled Jobs** - Auto-close tenders at deadline
+- [ ] **Evaluation System** - Scoring and multi-evaluator support
+- [ ] **Q&A System** - Bidder questions and public responses
+- [ ] **Document Management** - Multiple files, versioning, preview
+- [ ] **Reporting** - Tender analytics and audit reports
 
 ### Phase 4: Advanced Features
 - [ ] Q&A system for clarifications

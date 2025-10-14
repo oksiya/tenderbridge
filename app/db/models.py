@@ -43,17 +43,29 @@ class Tender(Base):
     closing_date = Column(DateTime, nullable=False)
     posted_by_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String, default="open")  # open, closed, awarded
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Status: draft, published, open, evaluation, closed, awarded, cancelled
+    status = Column(String, default="draft")
+    status_updated_at = Column(DateTime, default=datetime.utcnow)
+    
     document_path = Column(String, nullable=True)
+    
+    # Cancellation fields
+    cancelled_at = Column(DateTime, nullable=True)
+    cancellation_reason = Column(Text, nullable=True)
+    cancelled_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
     # Award-related fields (only populated when tender is awarded)
     awarded_at = Column(DateTime, nullable=True)
     winning_bid_id = Column(UUID(as_uuid=True), nullable=True)
     award_chain_tx = Column(String, nullable=True)
     award_hash_on_chain = Column(String, nullable=True)
+    award_justification = Column(Text, nullable=True)
 
     posted_by = relationship("Company", backref="tenders")
     bids = relationship("Bid", back_populates="tender", cascade="all, delete", foreign_keys="Bid.tender_id")
+    cancelled_by = relationship("User", foreign_keys=[cancelled_by_id])
 
 
 class Bid(Base):
@@ -63,9 +75,39 @@ class Bid(Base):
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     amount = Column(Numeric, nullable=False)
     document_path = Column(String, nullable=True)
-    status = Column(String, default="pending")  # pending, accepted, rejected
+    
+    # Status: pending, shortlisted, accepted, rejected, withdrawn
+    status = Column(String, default="pending")
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Withdrawal fields
+    withdrawn_at = Column(DateTime, nullable=True)
+    withdrawal_reason = Column(Text, nullable=True)
+    
+    # Revision tracking
+    revision_number = Column(Integer, default=1)
+    parent_bid_id = Column(UUID(as_uuid=True), nullable=True)  # For tracking revisions
 
     tender = relationship("Tender", back_populates="bids", foreign_keys=[tender_id])
     company = relationship("Company", backref="bids")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    type = Column(String, nullable=False)  # tender_published, bid_submitted, tender_awarded, etc.
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    related_tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"), nullable=True)
+    related_bid_id = Column(UUID(as_uuid=True), ForeignKey("bids.id"), nullable=True)
+    is_read = Column(String, default="false")  # true, false
+    created_at = Column(DateTime, default=datetime.utcnow)
+    read_at = Column(DateTime, nullable=True)
+    
+    user = relationship("User", backref="notifications")
+    related_tender = relationship("Tender", foreign_keys=[related_tender_id])
+    related_bid = relationship("Bid", foreign_keys=[related_bid_id])
 

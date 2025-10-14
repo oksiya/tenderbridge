@@ -12,20 +12,42 @@ class TenderBase(BaseModel):
     closing_date: datetime
 
 class TenderCreate(TenderBase):
-    posted_by_id: UUID
+    pass  # posted_by_id will come from current_user
+
+
+class TenderUpdate(BaseModel):
+    """Schema for updating tender details (only in draft/published state)"""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    closing_date: Optional[datetime] = None
+
+
+class TenderStatusUpdate(BaseModel):
+    """Schema for updating tender status"""
+    status: str
+    reason: Optional[str] = None  # Required for cancellation
+
 
 class TenderOut(TenderBase):
     id: UUID
     status: str
     created_at: datetime
+    updated_at: datetime
+    status_updated_at: datetime
     posted_by_id: UUID
     document_path: Optional[str] = None
+    
+    # Cancellation fields
+    cancelled_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
+    cancelled_by_id: Optional[UUID] = None
     
     # Award-related fields (only populated when awarded)
     awarded_at: Optional[datetime] = None
     winning_bid_id: Optional[UUID] = None
     award_chain_tx: Optional[str] = None
     award_hash_on_chain: Optional[str] = None
+    award_justification: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -34,6 +56,7 @@ class TenderOut(TenderBase):
 class AwardTenderRequest(BaseModel):
     """Request schema for awarding a tender to a winning bid"""
     winning_bid_id: UUID
+    justification: str  # Mandatory justification for award decision
 
 
 class AwardVerification(BaseModel):

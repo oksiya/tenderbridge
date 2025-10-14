@@ -14,3 +14,5 @@ app.include_router(bids.router)
 def root():
     return {"message": "Welcome to TenderBridge API"}
 
+
+

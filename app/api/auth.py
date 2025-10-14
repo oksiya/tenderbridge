@@ -23,21 +23,27 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    token = create_access_token({"sub": new_user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    token = create_access_token({"sub": str(new_user.id)})
+    return {"access_token": token, "token_type": "bearer", "user_id": str(new_user.id)}
 
 @router.post("/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    """Login with email/password - returns access token"""
     user = db.query(User).filter(User.email == user_data.email).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
     try:
         ok = verify_password(user_data.password, user.password_hash)
     except ValueError as exc:
-        # e.g. if incoming password is too long for bcrypt
         raise HTTPException(status_code=400, detail=str(exc))
 
     if not ok:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    token = create_access_token({"sub": user.email})
-    return {"access_token": token, "token_type": "bearer"}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+    token = create_access_token({"sub": str(user.id)})
+    return {"access_token": token, "token_type": "bearer", "user_id": str(user.id)}

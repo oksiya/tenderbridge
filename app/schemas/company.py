@@ -22,3 +22,7 @@ class CompanyOut(CompanyBase):
 
     class Config:
         orm_mode = True
+
+class AssignCompanyRequest(BaseModel):
+    user_id: UUID
+    company_id: UUID

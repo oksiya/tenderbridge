@@ -30,23 +30,27 @@ class User(Base):
 
 class Tender(Base):
     __tablename__ = "tenders"
-
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     closing_date = Column(DateTime, nullable=False)
     posted_by_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String, default="open")
-
+    status = Column(String, default="open")  # open, closed, awarded
     document_path = Column(String, nullable=True)
+    
+    # Award-related fields (only populated when tender is awarded)
+    awarded_at = Column(DateTime, nullable=True)
+    winning_bid_id = Column(UUID(as_uuid=True), nullable=True)
+    award_chain_tx = Column(String, nullable=True)
+    award_hash_on_chain = Column(String, nullable=True)
 
     posted_by = relationship("Company", backref="tenders")
-    bids = relationship("Bid", back_populates="tender", cascade="all, delete")
-    
+    bids = relationship("Bid", back_populates="tender", cascade="all, delete", foreign_keys="Bid.tender_id")
+
+
 class Bid(Base):
     __tablename__ = "bids"
-
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tender_id = Column(UUID(as_uuid=True), ForeignKey("tenders.id"), nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
@@ -55,6 +59,6 @@ class Bid(Base):
     status = Column(String, default="pending")  # pending, accepted, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    tender = relationship("Tender", back_populates="bids")
+    tender = relationship("Tender", back_populates="bids", foreign_keys=[tender_id])
     company = relationship("Company", backref="bids")
 

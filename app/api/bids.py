@@ -22,6 +22,7 @@ async def submit_bid_with_file(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """Submit a bid with document attachment (no blockchain stamping)"""
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
 
@@ -53,15 +54,22 @@ async def submit_bid_with_file(
     db.add(bid)
     db.commit()
     db.refresh(bid)
+
     return bid
+
 
 @router.get("/company/{company_id}", response_model=list[BidOut])
 def list_bids_by_company(company_id: UUID, db: Session = Depends(get_db)):
     bids = db.query(Bid).filter(Bid.company_id == company_id).order_by(Bid.created_at.desc()).all()
     return bids
 
+
 @router.get("/tender/{tender_id}", response_model=list[BidOut])
-def list_bids_for_tender(tender_id: UUID, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def list_bids_for_tender(
+    tender_id: UUID,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
@@ -72,7 +80,12 @@ def list_bids_for_tender(tender_id: UUID, db: Session = Depends(get_db), current
 
 
 @router.put("/{bid_id}/status")
-def update_bid_status(bid_id: UUID, payload: BidStatusUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def update_bid_status(
+    bid_id: UUID,
+    payload: BidStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
     bid = db.query(Bid).filter(Bid.id == bid_id).first()
     if not bid:
         raise HTTPException(status_code=404, detail="Bid not found")
@@ -88,3 +101,12 @@ def update_bid_status(bid_id: UUID, payload: BidStatusUpdate, db: Session = Depe
     db.commit()
     db.refresh(bid)
     return {"message": "Bid status updated", "bid_id": str(bid.id), "status": bid.status}
+
+
+@router.get("/{bid_id}")
+def get_bid(bid_id: UUID, db: Session = Depends(get_db)):
+    """Get bid details by ID"""
+    bid = db.query(Bid).filter(Bid.id == bid_id).first()
+    if not bid:
+        raise HTTPException(status_code=404, detail="Bid not found")
+    return bid

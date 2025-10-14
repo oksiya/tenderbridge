@@ -13,6 +13,8 @@ class Company(Base):
     registration_number = Column(String, unique=True, nullable=False)
     bee_level = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(String, default="active")  # active, deactivated, deleted
+    deactivated_at = Column(DateTime, nullable=True)
     
     users = relationship("User", back_populates="company")
 
@@ -24,6 +26,11 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
+    role = Column(String, default="user")  # admin, company_admin, tender_manager, evaluator, user
+    is_verified = Column(String, default="false")  # true, false
+    verification_token = Column(String, nullable=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     company = relationship("Company", back_populates="users")

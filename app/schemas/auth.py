@@ -40,3 +40,29 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user_id: str
+
+
+class EmailVerificationRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    
+    @validator("new_password")
+    def password_byte_length(cls, v: str):
+        if v is None:
+            raise ValueError("password must be provided")
+        encoded = v.encode("utf-8")
+        if len(encoded) > MAX_BCRYPT_BYTES:
+            v = encoded[:MAX_BCRYPT_BYTES].decode('utf-8', errors='ignore')
+        return v

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.db.session import Base, engine
-from app.api import auth, company, tender, bids
+from app.api import auth, company, tender, bids, users
 
 Base.metadata.create_all(bind=engine)
 
@@ -9,6 +9,7 @@ app.include_router(auth.router)
 app.include_router(company.router)
 app.include_router(tender.router)
 app.include_router(bids.router)
+app.include_router(users.router)
 
 @app.get("/")
 def root():

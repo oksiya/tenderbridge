@@ -11,6 +11,7 @@ from app.schemas.tender import TenderCreate, TenderOut, AwardTenderRequest, Awar
 from app.services.blockchain_service import verify_award_by_tender_id
 from app.core.deps import get_current_user
 from app.services.chain_queue import chain_queue
+from app.utils.permissions import can_create_tender, can_award_tender
 
 router = APIRouter(prefix="/tenders", tags=["tenders"])
 UPLOAD_DIR = "uploads/tenders"
@@ -26,6 +27,13 @@ def create_tender(
     """Create a new tender (no blockchain stamping)"""
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
+    
+    # Check permissions
+    if not can_create_tender(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only tender managers and above can create tenders"
+        )
 
     tender = Tender(
         title=data.title,
@@ -82,6 +90,13 @@ async def upload_tender(
     """Upload a tender with document attachment (no blockchain stamping)"""
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
+    
+    # Check permissions
+    if not can_create_tender(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only tender managers and above can create tenders"
+        )
 
     allowed_ext = {"pdf", "docx", "zip"}
     ext = file.filename.split(".")[-1].lower()
@@ -122,14 +137,18 @@ def award_tender(
 ):
     """
     Award a tender to the winning bid - records on blockchain.
-    Only the tender owner can award the tender.
+    Only the tender owner with appropriate role can award the tender.
     """
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
     
-    if tender.posted_by_id != current_user.company_id:
-        raise HTTPException(status_code=403, detail="Only tender owner can award")
+    # Check permissions
+    if not can_award_tender(current_user, tender.posted_by_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Only tender managers/admins from the tender-owning company can award tenders"
+        )
     
     if tender.status == "awarded":
         raise HTTPException(status_code=400, detail="Tender already awarded")

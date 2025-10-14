@@ -18,3 +18,4 @@ alembic/
 alembic.ini
 uploads/
 archive/
+migrations/

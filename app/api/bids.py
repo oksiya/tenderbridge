@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.db.models import Bid, Tender
 from app.schemas.bid import BidOut, BidStatusUpdate
 from app.core.deps import get_current_user
+from app.utils.permissions import can_submit_bid
 
 router = APIRouter(prefix="/bids", tags=["bids"])
 UPLOAD_DIR = "uploads/bids"
@@ -25,10 +26,24 @@ async def submit_bid_with_file(
     """Submit a bid with document attachment (no blockchain stamping)"""
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
+    
+    # Check permissions
+    if not can_submit_bid(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="User must be assigned to a company to submit bids"
+        )
 
     tender = db.query(Tender).filter(Tender.id == tender_id).first()
     if not tender or tender.status != "open":
         raise HTTPException(status_code=400, detail="Tender not open for bids")
+    
+    # Prevent company from bidding on its own tender
+    if tender.posted_by_id == current_user.company_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot bid on your own company's tender"
+        )
 
     allowed = {"pdf", "docx", "zip"}
     ext = file.filename.split(".")[-1].lower()
@@ -59,7 +74,22 @@ async def submit_bid_with_file(
 
 
 @router.get("/company/{company_id}", response_model=list[BidOut])
-def list_bids_by_company(company_id: UUID, db: Session = Depends(get_db)):
+def list_bids_by_company(
+    company_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    List all bids by a specific company.
+    Authorization: Only company members can view their own bids.
+    """
+    # Check if user belongs to the company they're trying to view
+    if current_user.company_id != company_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="Not authorized to view bids for this company"
+        )
+    
     bids = db.query(Bid).filter(Bid.company_id == company_id).order_by(Bid.created_at.desc()).all()
     return bids
 

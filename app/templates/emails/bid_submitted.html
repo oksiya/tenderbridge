@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge info">NEW BID RECEIVED</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if bid %}
+<div class="details">
+    <h3>Bid Summary</h3>
+    <p><strong>Bidder Company:</strong> {{ bid.company_name if bid.company_name else 'Confidential' }}</p>
+    <p><strong>Bid Amount:</strong> ${{ "{:,.2f}".format(bid.amount) }}</p>
+    <p><strong>Submitted:</strong> {{ bid.created_at }}</p>
+    <p><strong>Status:</strong> <span class="badge info">PENDING</span></p>
+</div>
+{% endif %}
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Information</h3>
+    <p><strong>Tender:</strong> {{ tender.title }}</p>
+    <p><strong>Closing Date:</strong> {{ tender.closing_date }}</p>
+    <p><strong>Total Bids:</strong> {{ tender.bid_count if tender.bid_count else 'N/A' }}</p>
+</div>
+{% endif %}
+
+<a href="#" class="button">Review Bid</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    A new bid has been submitted for your tender. Log in to review the details.
+</p>
+{% endblock %}

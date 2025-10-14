@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <p>{{ message }}</p>
+</div>
+
+{% if details %}
+<div class="details">
+    <h3>Details</h3>
+    {{ details|safe }}
+</div>
+{% endif %}
+
+<a href="#" class="button">View on Platform</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    This is a notification from {{ project_name }}. Log in to your account for more information.
+</p>
+{% endblock %}

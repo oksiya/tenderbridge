@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge warning">BID WITHDRAWN</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if bid %}
+<div class="details">
+    <h3>Bid Details</h3>
+    <p><strong>Bid Amount:</strong> ${{ "{:,.2f}".format(bid.amount) }}</p>
+    <p><strong>Tender:</strong> {{ tender.title if tender else 'N/A' }}</p>
+    <p><strong>Status:</strong> <span class="badge warning">WITHDRAWN</span></p>
+    {% if bid.withdrawn_at %}
+    <p><strong>Withdrawn Date:</strong> {{ bid.withdrawn_at }}</p>
+    {% endif %}
+    {% if bid.withdrawal_reason %}
+    <p><strong>Reason:</strong> {{ bid.withdrawal_reason }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<a href="#" class="button">View Details</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    Your bid has been withdrawn from this tender. You can submit a new bid before the closing date if needed.
+</p>
+{% endblock %}

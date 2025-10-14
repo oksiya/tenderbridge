@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge info">STATUS UPDATE</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Details</h3>
+    <p><strong>Title:</strong> {{ tender.title }}</p>
+    {% if old_status %}
+    <p><strong>Previous Status:</strong> <span class="badge">{{ old_status|upper }}</span></p>
+    {% endif %}
+    <p><strong>New Status:</strong> <span class="badge info">{{ tender.status|upper }}</span></p>
+    {% if tender.status_updated_at %}
+    <p><strong>Updated:</strong> {{ tender.status_updated_at }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if reason %}
+<div class="details">
+    <h3>Additional Information</h3>
+    <p>{{ reason }}</p>
+</div>
+{% endif %}
+
+<a href="#" class="button">View Tender</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    The tender status has been updated. Check your dashboard for the latest information.
+</p>
+{% endblock %}

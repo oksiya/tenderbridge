@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <p><strong>A new tender has been published!</strong></p>
+    <p>{{ message }}</p>
+</div>
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Details</h3>
+    <p><strong>Title:</strong> {{ tender.title }}</p>
+    <p><strong>Description:</strong> {{ tender.description }}</p>
+    <p><strong>Closing Date:</strong> {{ tender.closing_date }}</p>
+    {% if tender.document_path %}
+    <p><strong>Document:</strong> Available for download</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<a href="#" class="button">View Tender</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    This tender is now open for bid submissions. Make sure to submit your bid before the closing date.
+</p>
+{% endblock %}

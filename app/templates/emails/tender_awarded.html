@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge success">AWARDED</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Details</h3>
+    <p><strong>Title:</strong> {{ tender.title }}</p>
+    <p><strong>Status:</strong> <span class="badge success">AWARDED</span></p>
+    <p><strong>Awarded Date:</strong> {{ tender.awarded_at if tender.awarded_at else 'Just now' }}</p>
+</div>
+{% endif %}
+
+{% if tender and tender.award_justification %}
+<div class="details">
+    <h3>Award Justification</h3>
+    <p>{{ tender.award_justification }}</p>
+</div>
+{% endif %}
+
+{% if tender and tender.award_chain_tx %}
+<div class="details">
+    <h3>Blockchain Verification</h3>
+    <p><strong>Transaction Hash:</strong> <code style="font-size: 11px;">{{ tender.award_chain_tx }}</code></p>
+    <p style="font-size: 12px; color: #6c757d;">This award has been permanently recorded on the blockchain for transparency and immutability.</p>
+</div>
+{% endif %}
+
+<a href="#" class="button">View Award Details</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    The tender award has been finalized. Check the platform for complete details.
+</p>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🎉 {{ title }}</h2>
+
+<div class="message">
+    <span class="badge success">CONGRATULATIONS</span>
+    <p><strong>{{ message }}</strong></p>
+</div>
+
+{% if bid %}
+<div class="details">
+    <h3>Winning Bid Details</h3>
+    <p><strong>Bid Amount:</strong> ${{ "{:,.2f}".format(bid.amount) }}</p>
+    <p><strong>Tender:</strong> {{ tender.title if tender else 'N/A' }}</p>
+    <p><strong>Status:</strong> <span class="badge success">ACCEPTED</span></p>
+</div>
+{% endif %}
+
+{% if tender and tender.award_justification %}
+<div class="details">
+    <h3>Award Justification</h3>
+    <p>{{ tender.award_justification }}</p>
+</div>
+{% endif %}
+
+<a href="#" class="button">View Award Details</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    Congratulations on winning this tender! Please check your dashboard for next steps and required documentation.
+</p>
+{% endblock %}

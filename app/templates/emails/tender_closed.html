@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge warning">TENDER CLOSED</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Details</h3>
+    <p><strong>Title:</strong> {{ tender.title }}</p>
+    <p><strong>Closed Date:</strong> {{ tender.closing_date }}</p>
+    <p><strong>Status:</strong> <span class="badge warning">{{ tender.status|upper }}</span></p>
+    {% if tender.bid_count %}
+    <p><strong>Total Bids Received:</strong> {{ tender.bid_count }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<a href="#" class="button">View Tender</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    This tender is now closed for new submissions. The evaluation process will begin shortly.
+</p>
+{% endblock %}

@@ -32,6 +32,10 @@ class User(Base):
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Email preferences (Phase 3)
+    email_notifications = Column(String, default="true")  # true, false
+    email_frequency = Column(String, default="immediate")  # immediate, daily, weekly, never
 
     company = relationship("Company", back_populates="users")
 
@@ -108,6 +112,24 @@ class Notification(Base):
     read_at = Column(DateTime, nullable=True)
     
     user = relationship("User", backref="notifications")
-    related_tender = relationship("Tender", foreign_keys=[related_tender_id])
-    related_bid = relationship("Bid", foreign_keys=[related_bid_id])
+
+
+class EmailLog(Base):
+    """Email delivery tracking (Phase 3)"""
+    __tablename__ = "email_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    notification_id = Column(UUID(as_uuid=True), ForeignKey("notifications.id"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    email_to = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    template_name = Column(String, nullable=False)
+    status = Column(String, default="queued")  # queued, sent, failed, bounced
+    provider = Column(String, nullable=True)  # smtp, sendgrid, console
+    error_message = Column(Text, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", backref="email_logs")
+    notification = relationship("Notification", backref="email_logs")
 

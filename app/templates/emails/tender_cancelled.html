@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge danger">CANCELLED</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if tender %}
+<div class="details">
+    <h3>Tender Details</h3>
+    <p><strong>Title:</strong> {{ tender.title }}</p>
+    <p><strong>Status:</strong> <span class="badge danger">CANCELLED</span></p>
+    {% if tender.cancellation_reason %}
+    <p><strong>Reason:</strong> {{ tender.cancellation_reason }}</p>
+    {% endif %}
+    {% if tender.cancelled_at %}
+    <p><strong>Cancelled Date:</strong> {{ tender.cancelled_at }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<a href="#" class="button">View Details</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    This tender has been cancelled. Any bids submitted will not be processed. Please check the platform for other opportunities.
+</p>
+{% endblock %}

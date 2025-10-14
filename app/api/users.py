@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from app.db.session import get_db
 from app.db.models import User
-from app.schemas.user import UserRoleUpdate, UserOut
+from app.schemas.user import UserRoleUpdate, UserOut, EmailPreferencesUpdate, EmailPreferencesOut
 from app.core.deps import get_current_user
 from app.utils.permissions import is_admin, is_company_admin, ROLES
 
@@ -144,4 +144,54 @@ def get_user(
         "company_id": str(user.company_id) if user.company_id else None,
         "is_verified": user.is_verified,
         "created_at": user.created_at.isoformat()
+    }
+
+
+@router.get("/me/email-preferences", response_model=EmailPreferencesOut)
+def get_email_preferences(current_user: User = Depends(get_current_user)):
+    """Get current user's email notification preferences (Phase 3)"""
+    return {
+        "email_notifications": current_user.email_notifications or "true",
+        "email_frequency": current_user.email_frequency or "immediate"
+    }
+
+
+@router.put("/me/email-preferences", response_model=EmailPreferencesOut)
+def update_email_preferences(
+    preferences: EmailPreferencesUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update email notification preferences (Phase 3).
+    
+    - email_notifications: 'true' or 'false' (enable/disable all emails)
+    - email_frequency: 'immediate', 'daily', 'weekly', or 'never'
+    """
+    # Validate values
+    if preferences.email_notifications and preferences.email_notifications not in ["true", "false"]:
+        raise HTTPException(
+            status_code=400,
+            detail="email_notifications must be 'true' or 'false'"
+        )
+    
+    if preferences.email_frequency and preferences.email_frequency not in ["immediate", "daily", "weekly", "never"]:
+        raise HTTPException(
+            status_code=400,
+            detail="email_frequency must be 'immediate', 'daily', 'weekly', or 'never'"
+        )
+    
+    # Update preferences
+    if preferences.email_notifications is not None:
+        current_user.email_notifications = preferences.email_notifications
+    
+    if preferences.email_frequency is not None:
+        current_user.email_frequency = preferences.email_frequency
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "email_notifications": current_user.email_notifications,
+        "email_frequency": current_user.email_frequency
     }

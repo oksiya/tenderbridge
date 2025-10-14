@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ title }}</h2>
+
+<div class="message">
+    <span class="badge danger">NOT SELECTED</span>
+    <p>{{ message }}</p>
+</div>
+
+{% if bid %}
+<div class="details">
+    <h3>Bid Details</h3>
+    <p><strong>Bid Amount:</strong> ${{ "{:,.2f}".format(bid.amount) }}</p>
+    <p><strong>Tender:</strong> {{ tender.title if tender else 'N/A' }}</p>
+    <p><strong>Status:</strong> <span class="badge danger">REJECTED</span></p>
+</div>
+{% endif %}
+
+{% if tender and tender.award_justification %}
+<div class="details">
+    <h3>Award Decision</h3>
+    <p>{{ tender.award_justification }}</p>
+</div>
+{% endif %}
+
+<a href="#" class="button">View Tender Details</a>
+
+<p style="margin-top: 20px; color: #6c757d; font-size: 14px;">
+    Thank you for your participation in this tender process. We encourage you to participate in future opportunities.
+</p>
+{% endblock %}

@@ -14,18 +14,9 @@ http://localhost:8000/docs
 
 ### 2. Truncate All Tables (Fresh Start)
 ```bash
-# Connect to database
-podman exec -it tenderbridge_db_1 psql -U postgres -d tenderbridge
-
 # Truncate tables (in order to respect foreign keys)
-TRUNCATE TABLE qa_responses CASCADE;
-TRUNCATE TABLE qa_questions CASCADE;
-TRUNCATE TABLE documents CASCADE;
-TRUNCATE TABLE bids CASCADE;
-TRUNCATE TABLE tenders CASCADE;
-TRUNCATE TABLE notifications CASCADE;
-TRUNCATE TABLE companies CASCADE;
-TRUNCATE TABLE users CASCADE;
+podman exec -it tenderbridge_db_1 psql -U tenderuser -d tenderbridge -c "
+TRUNCATE TABLE answers, questions, documents, bids, tenders, notifications, companies, users, email_logs RESTART IDENTITY CASCADE;"
 
 # Exit
 \q
@@ -49,7 +40,7 @@ INSERT INTO users (id, email, password_hash, role, is_verified, created_at)
 VALUES (
   gen_random_uuid(),
   'admin@system.com',
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzS3MV/PVS',
+  '$2b$12$9TJVsFbk6K1kDoyrP6cv9e2G6xOzyQpytgWQcaE.kPLLbyqEocc.W',
   'admin',
   'true',
   NOW()
@@ -62,7 +53,7 @@ SELECT id, email, role, is_verified FROM users;
 \q
 ```
 
-**Password:** `Admin123!` (pre-hashed in the SQL above)
+**Password:** `admin` (pre-hashed in the SQL above)
 
 ---
 
@@ -74,7 +65,7 @@ SELECT id, email, role, is_verified FROM users;
 ```json
 {
   "email": "admin@system.com",
-  "password": "Admin123!"
+  "password": "admin"
 }
 ```
 

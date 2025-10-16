@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
@@ -20,8 +21,6 @@ from app.utils.pagination import PaginationParams, create_paginated_response, pa
 from app.utils.cache import cache_response, invalidate_tender_cache, invalidate_bid_cache
 
 router = APIRouter(prefix="/tenders", tags=["tenders"])
-UPLOAD_DIR = "uploads/tenders"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 @router.post("/", response_model=TenderOut)
@@ -31,8 +30,13 @@ def create_tender(
     current_user=Depends(get_current_user)
 ):
     """
-    Create a new tender in 'draft' status.
+    Create a new tender in 'draft' status (JSON-only).
     Must be published before it can receive bids.
+    
+    Upload documents separately using POST /documents/tenders/{tender_id}/upload
+    
+    Supports flexible field names:
+    - closing_date, deadline, or submission_deadline (all mean the same)
     """
     if not current_user.company_id:
         raise HTTPException(status_code=400, detail="User must belong to a company")
@@ -44,10 +48,21 @@ def create_tender(
             detail="Only tender managers and above can create tenders"
         )
 
+    # Handle flexible date field names
+    closing_date = data.closing_date or data.deadline or data.submission_deadline
+    if not closing_date:
+        raise HTTPException(
+            status_code=400, 
+            detail="One of closing_date, deadline, or submission_deadline is required"
+        )
+
     tender = Tender(
         title=data.title,
         description=data.description,
-        closing_date=data.closing_date,
+        closing_date=closing_date,
+        budget=data.budget,
+        requirements=data.requirements,
+        category=data.category,
         posted_by_id=current_user.company_id,
         status=TenderStatus.DRAFT,  # Start in draft status
     )
@@ -123,6 +138,12 @@ def update_tender(
         tender.description = data.description
     if data.closing_date is not None:
         tender.closing_date = data.closing_date
+    if data.budget is not None:
+        tender.budget = data.budget
+    if data.requirements is not None:
+        tender.requirements = data.requirements
+    if data.category is not None:
+        tender.category = data.category
     
     tender.updated_at = datetime.utcnow()
     db.commit()
@@ -212,60 +233,6 @@ def close_tender(
     db.commit()
     
     return {"message": "Tender closed successfully", "status": tender.status}
-
-
-@router.post("/upload")
-async def upload_tender(
-    title: str = Form(...),
-    description: str = Form(...),
-    closing_date: str = Form(...),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """Upload a tender with document attachment (no blockchain stamping)"""
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    
-    # Check permissions
-    if not can_create_tender(current_user):
-        raise HTTPException(
-            status_code=403,
-            detail="Only tender managers and above can create tenders"
-        )
-
-    allowed_ext = {"pdf", "docx", "zip"}
-    ext = file.filename.split(".")[-1].lower()
-    if ext not in allowed_ext:
-        raise HTTPException(status_code=400, detail=f"Invalid file type '{ext}'")
-
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    unique_name = f"{uuid.uuid4()}_{file.filename}"
-    path = os.path.join(UPLOAD_DIR, unique_name)
-    with open(path, "wb") as buffer:
-        buffer.write(await file.read())
-
-    try:
-        closing_dt = datetime.fromisoformat(closing_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format")
-
-    tender = Tender(
-        title=title,
-        description=description,
-        closing_date=closing_dt,
-        posted_by_id=current_user.company_id,
-        document_path=path,
-        status=TenderStatus.DRAFT,  # Start in draft status
-    )
-    db.add(tender)
-    db.commit()
-    db.refresh(tender)
-
-    # Invalidate tender list cache
-    invalidate_tender_cache()
-
-    return {"message": "Tender uploaded successfully (draft status)", "tender": tender}
 
 
 @router.post("/{tender_id}/award", response_model=TenderOut)

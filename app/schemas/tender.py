@@ -9,10 +9,15 @@ from uuid import UUID
 class TenderBase(BaseModel):
     title: str
     description: str
-    closing_date: datetime
 
 class TenderCreate(TenderBase):
-    pass  # posted_by_id will come from current_user
+    closing_date: Optional[datetime] = None
+    budget: Optional[float] = None
+    requirements: Optional[str] = None
+    category: Optional[str] = None
+    # Alternative field names for flexibility (at least one date field required)
+    deadline: Optional[datetime] = None  # Alias for closing_date
+    submission_deadline: Optional[datetime] = None  # Alias for closing_date
 
 
 class TenderUpdate(BaseModel):
@@ -20,6 +25,9 @@ class TenderUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     closing_date: Optional[datetime] = None
+    budget: Optional[float] = None
+    requirements: Optional[str] = None
+    category: Optional[str] = None
 
 
 class TenderStatusUpdate(BaseModel):
@@ -28,14 +36,20 @@ class TenderStatusUpdate(BaseModel):
     reason: Optional[str] = None  # Required for cancellation
 
 
-class TenderOut(TenderBase):
+class TenderOut(BaseModel):
     id: UUID
+    title: str
+    description: str
+    closing_date: datetime
     status: str
     created_at: datetime
     updated_at: datetime
     status_updated_at: datetime
     posted_by_id: UUID
     document_path: Optional[str] = None
+    budget: Optional[float] = None
+    requirements: Optional[str] = None
+    category: Optional[str] = None
     
     # Cancellation fields
     cancelled_at: Optional[datetime] = None
